@@ -4,11 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.swpu.reggie.common.R;
 import com.swpu.reggie.domain.User;
 import com.swpu.reggie.service.UserService;
-import com.swpu.reggie.utils.SMSUtils;
 import com.swpu.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpSession;
 import javax.websocket.Session;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/user")
@@ -25,6 +27,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @PostMapping("/sendMsg")
     public R<String> sendMsg(@RequestBody User user, HttpSession session) {
@@ -35,7 +40,9 @@ public class UserController {
             String code = ValidateCodeUtils.generateValidateCode(4).toString();
             log.info("code={}", code);
 //            SMSUtils.sendMessage("");
-            session.setAttribute(phone,code);
+//            session.setAttribute(phone,code);
+
+            redisTemplate.opsForValue().set(phone,code,5, TimeUnit.MINUTES);
 
             return R.success("手机验证码已发送");
 
@@ -59,7 +66,9 @@ public class UserController {
 
         String code = map.get("code").toString();
 
-        Object codeInSession = session.getAttribute(phone);
+//        Object codeInSession = session.getAttribute(phone);
+
+        Object codeInSession = redisTemplate.opsForValue().get(phone);
 
         if (codeInSession != null && codeInSession.equals(code)){
 
@@ -78,6 +87,9 @@ public class UserController {
             }
 
             session.setAttribute("user",user.getId());
+
+            redisTemplate.delete(phone);
+
             return R.success(user);
         }
 
