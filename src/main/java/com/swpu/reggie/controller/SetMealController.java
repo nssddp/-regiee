@@ -112,6 +112,7 @@ public class SetMealController {
      * @return
      */
     @PostMapping("/status/{status}")
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R<Boolean> changeStatus(@RequestParam List<Long> ids, @PathVariable String status) {
 
         int i = 0;
@@ -171,6 +172,7 @@ public class SetMealController {
      * @return
      */
     @PutMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R<Boolean> update(@RequestBody SetmealDto setmealDto) {
 
         setMealService.updateWithDish(setmealDto);
