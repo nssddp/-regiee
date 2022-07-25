@@ -6,6 +6,7 @@ import com.swpu.reggie.common.BaseContext;
 import com.swpu.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
+
 import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
@@ -25,7 +26,8 @@ public class LoginCheckFilter implements Filter {
 
         String requestURI = request.getRequestURI();
 
-        log.info("拦截到请求：{}",requestURI);
+
+        log.info("拦截到请求：{}", requestURI);
 
         //定义不需要处理的请求
         String[] urls = new String[]{
@@ -38,37 +40,49 @@ public class LoginCheckFilter implements Filter {
                 "/user/login"
         };
 
-        boolean check = check(urls,requestURI);
+        boolean check = check(urls, requestURI);
 
-        if (check){
-            log.info("本次请求{}不需要处理",requestURI);
-            filterChain.doFilter(request,response);
+        if (check) {
+            log.info("本次请求{}不需要处理", requestURI);
+            filterChain.doFilter(request, response);
             return;
         }
 
-        if (request.getSession().getAttribute("employee") != null){
-            log.info("用户已登录，用户id为：{}",request.getSession().getAttribute("employee"));
+        String[] msg = new String[]{"/backend/**","/employee/**","/category/**","/dish/**","/setmeal/**","/order/**"};
+        if (check(msg, requestURI)) {
+            if (request.getSession().getAttribute("employee") != null) {
+                log.info("用户已登录，用户id为：{}", request.getSession().getAttribute("employee"));
 
-            Long empId = (Long) request.getSession().getAttribute("employee");
+                Long empId = (Long) request.getSession().getAttribute("employee");
+                BaseContext.setCurrentId(empId);
+
+                filterChain.doFilter(request, response);
+                return;
+            }else{
+                log.info("员工未登录");
+                response.getWriter().write(JSON.toJSONString(R.error("NotLogin")));
+                return;
+            }
+        } else if (request.getSession().getAttribute("user") != null) {
+            log.info("用户已登录，用户id为：{}", request.getSession().getAttribute("user"));
+
+            Long empId = (Long) request.getSession().getAttribute("user");
             BaseContext.setCurrentId(empId);
 
-            filterChain.doFilter(request,response);
+            filterChain.doFilter(request, response);
             return;
-        }
-        //移动端用户登录状态判断
-        if (request.getSession().getAttribute("user") != null){
-            log.info("用户已登录，用户id为：{}",request.getSession().getAttribute("user"));
-
-            Long userId = (Long) request.getSession().getAttribute("user");
-            BaseContext.setCurrentId(userId);
-
-            filterChain.doFilter(request,response);
+        }else {
+            log.info("用户未登录");
+            response.getWriter().write(JSON.toJSONString(R.error("NotLogin")));
             return;
         }
 
-        log.info("用户未登录");
-        response.getWriter().write(JSON.toJSONString(R.error("NotLogin")));
-        return;
+
+
+
+
+
+
 
         /*log.info("拦截到请求：{}", request.getRequestURI());
         filterChain.doFilter(request, response);*/
@@ -76,9 +90,9 @@ public class LoginCheckFilter implements Filter {
 
     public boolean check(String[] urls, String requestURI) {
 
-        for (String url : urls){
+        for (String url : urls) {
             boolean match = PATH_MATCHER.match(url, requestURI);
-            if (match){
+            if (match) {
                 return true;
             }
         }

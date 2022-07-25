@@ -1,25 +1,20 @@
 package com.swpu.reggie.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.swpu.reggie.common.R;
-import com.swpu.reggie.domain.Category;
-import com.swpu.reggie.domain.Dish;
 import com.swpu.reggie.domain.OrderDetail;
 import com.swpu.reggie.domain.Orders;
-import com.swpu.reggie.dto.DishDto;
 import com.swpu.reggie.dto.OrderDto;
 import com.swpu.reggie.service.OrderDetailService;
 import com.swpu.reggie.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
-import javax.lang.model.element.NestingKind;
-import java.util.ArrayList;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,6 +45,12 @@ public class OrderController {
         return R.success("下单成功");
     }
 
+    /**
+     * 历史订单
+     * @param page
+     * @param pageSize
+     * @return
+     */
     @GetMapping("/userPage")
     public R<Page> userPage(int page, int pageSize) {
 
@@ -84,6 +85,15 @@ public class OrderController {
         return R.success(orderDtoPage);
     }
 
+    /**
+     * 后台订单页面
+     * @param page
+     * @param pageSize
+     * @param number
+     * @param startTime
+     * @param endTime
+     * @return
+     */
     @GetMapping("/page")
     public R<Page> page(int page, int pageSize, Long number, String startTime, String endTime) {
         log.info("page = {},pageSize = {}, num = {}, startTime = {}, endTime = {}", page, pageSize, number,startTime,endTime);
@@ -107,6 +117,37 @@ public class OrderController {
     @PutMapping
     public R<String> statusChange(@RequestBody Orders orders){
         log.info(String.valueOf(orders));
+        Long ordersId = orders.getId();
+        Orders order = orderService.getById(ordersId);
+        order.setStatus(4);
+        orderService.updateById(order);
+
+        return R.success("状态已更新");
+    }
+
+    @PostMapping("again")
+    public R<String> OrderAgain(@RequestBody Orders orders){
+
+        Long ordersId = orders.getId();
+        OrderDto orderDto = orderService.getByIdWithDetail(ordersId);
+
+        Orders order = orderService.getById(ordersId);
+        long id = IdWorker.getId();
+        order.setId(id);
+        order.setCheckoutTime(LocalDateTime.now());
+        order.setOrderTime(LocalDateTime.now());
+        order.setStatus(2);
+
+        List<OrderDetail> orderDetails = orderDto.getOrderDetails();
+        orderDetails.stream().map((item) -> {
+            item.setOrderId(id);
+            item.setId(null);
+
+            return orderDetails;
+        }).collect(Collectors.toList());
+
+        orderService.save(order);
+        orderDetailService.saveBatch(orderDetails);
 
 
         return null;
