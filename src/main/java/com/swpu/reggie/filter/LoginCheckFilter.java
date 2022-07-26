@@ -48,7 +48,8 @@ public class LoginCheckFilter implements Filter {
             return;
         }
 
-        String[] msg = new String[]{"/backend/**","/employee/**","/category/**","/dish/**","/setmeal/**","/order/**"};
+        String[] msg = new String[]{"/backend/**", "/employee/**", "/category/**", "/dish/**", "/setmeal/**", "/backend/order/**","/order/page"};
+        String[] msg2 = new String[]{"/page/**"};
         if (check(msg, requestURI)) {
             if (request.getSession().getAttribute("employee") != null) {
                 log.info("用户已登录，用户id为：{}", request.getSession().getAttribute("employee"));
@@ -57,31 +58,25 @@ public class LoginCheckFilter implements Filter {
                 BaseContext.setCurrentId(empId);
 
                 filterChain.doFilter(request, response);
-                return;
-            }else{
+            } else {
                 log.info("员工未登录");
                 response.getWriter().write(JSON.toJSONString(R.error("NotLogin")));
-                return;
             }
-        } else if (request.getSession().getAttribute("user") != null) {
+            return;
+        }
+
+        if (request.getSession().getAttribute("user") != null ) {
             log.info("用户已登录，用户id为：{}", request.getSession().getAttribute("user"));
 
             Long empId = (Long) request.getSession().getAttribute("user");
             BaseContext.setCurrentId(empId);
 
             filterChain.doFilter(request, response);
-            return;
-        }else {
+        } else {
             log.info("用户未登录");
             response.getWriter().write(JSON.toJSONString(R.error("NotLogin")));
-            return;
         }
-
-
-
-
-
-
+        return;
 
 
         /*log.info("拦截到请求：{}", request.getRequestURI());
